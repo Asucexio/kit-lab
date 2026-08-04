@@ -55,6 +55,75 @@ componentsRouter.post("/", requireAuth, async (req, res) => {
       error: "name, description, category, code, and install_command are required",
     });
   }
+  // PUT /api/components/:id (auth required, owner only)
+componentsRouter.put("/:id", requireAuth, async (req, res) => {
+  const { id } = req.params;
+
+  const { data: existing, error: fetchError } = await supabase
+    .from("components")
+    .select("author_id")
+    .eq("id", id)
+    .single();
+
+  if (fetchError || !existing) {
+    return res.status(404).json({ error: "Component not found" });
+  }
+  if (existing.author_id !== req.user.id) {
+    return res.status(403).json({ error: "You can only edit your own components" });
+  }
+
+  const { name, description, category, code, install_command, dependencies, tags, published } = req.body;
+
+  const { data, error } = await supabase
+    .from("components")
+    .update({
+      ...(name !== undefined && { name }),
+      ...(description !== undefined && { description }),
+      ...(category !== undefined && { category }),
+      ...(code !== undefined && { code }),
+      ...(install_command !== undefined && { install_command }),
+      ...(dependencies !== undefined && { dependencies }),
+      ...(tags !== undefined && { tags }),
+      ...(published !== undefined && { published }),
+    })
+    .eq("id", id)
+    .select("*, profiles(id, name)")
+    .single();
+
+  if (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to update component" });
+  }
+
+  res.json({ component: data });
+});
+
+// DELETE /api/components/:id (auth required, owner only)
+componentsRouter.delete("/:id", requireAuth, async (req, res) => {
+  const { id } = req.params;
+
+  const { data: existing, error: fetchError } = await supabase
+    .from("components")
+    .select("author_id")
+    .eq("id", id)
+    .single();
+
+  if (fetchError || !existing) {
+    return res.status(404).json({ error: "Component not found" });
+  }
+  if (existing.author_id !== req.user.id) {
+    return res.status(403).json({ error: "You can only delete your own components" });
+  }
+
+  const { error } = await supabase.from("components").delete().eq("id", id);
+
+  if (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to delete component" });
+  }
+
+  res.status(204).send();
+});
 
   const slug = name
     .toLowerCase()
