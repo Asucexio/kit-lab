@@ -8,6 +8,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
 app.use("/api/components", componentsRouter);
 
 app.get("/api/health", (req, res) => {

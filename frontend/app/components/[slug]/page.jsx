@@ -6,6 +6,8 @@ import Link from "next/link";
 import { api } from "../../../lib/api";
 import LivePreview from "../../../components/LivePreview";
 import CodeBlock from "../../../components/CodeBlock";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const TABS = ["Preview", "Code", "Install"];
 
@@ -54,39 +56,30 @@ export default function ComponentDetailPage() {
         {component.tags?.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {component.tags.map((t) => (
-              <span
-                key={t}
-                className="rounded-full border border-border px-2.5 py-1 font-mono text-[11px] text-muted"
-              >
-                {t}
-              </span>
+              <Badge key={t}>{t}</Badge>
             ))}
           </div>
         )}
       </div>
 
-      <div className="mt-8 flex gap-1 border-b border-border">
-        {TABS.map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 font-mono text-sm transition ${
-              tab === t
-                ? "border-b-2 border-accent text-accent"
-                : "text-muted hover:text-ink"
-            }`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
+      <Tabs className="mt-8">
+        <TabsList>
+          {TABS.map((t) => (
+            <TabsTrigger key={t} onClick={() => setTab(t)} active={tab === t}>
+              {t}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-      <div className="mt-6">
-        {tab === "Preview" && <LivePreview code={component.code} />}
+        <TabsContent active={tab === "Preview"}>
+          <LivePreview code={component.code} />
+        </TabsContent>
 
-        {tab === "Code" && <CodeBlock code={component.code} />}
+        <TabsContent active={tab === "Code"}>
+          <CodeBlock code={component.code} />
+        </TabsContent>
 
-        {tab === "Install" && (
+        <TabsContent active={tab === "Install"}>
           <div className="space-y-5">
             <div>
               <p className="mb-2 font-mono text-xs uppercase tracking-wide text-muted">
@@ -101,12 +94,7 @@ export default function ComponentDetailPage() {
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {component.dependencies.map((d) => (
-                    <span
-                      key={d}
-                      className="rounded-md border border-border bg-surface px-2.5 py-1 font-mono text-xs text-ink"
-                    >
-                      {d}
-                    </span>
+                    <Badge key={d} className="rounded-md bg-surface text-ink">{d}</Badge>
                   ))}
                 </div>
               </div>
@@ -118,8 +106,8 @@ export default function ComponentDetailPage() {
               <CodeBlock code={component.code} />
             </div>
           </div>
-        )}
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

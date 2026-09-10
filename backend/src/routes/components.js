@@ -27,7 +27,7 @@ componentsRouter.get("/", async (req, res) => {
   res.json({ components: data });
 });
 
-// GET /api/components/:slug
+ 
 componentsRouter.get("/:slug", async (req, res) => {
   const { data, error } = await supabase
     .from("components")
@@ -46,7 +46,23 @@ componentsRouter.get("/:slug", async (req, res) => {
   res.json({ component: data });
 });
 
-// POST /api/components (auth required)
+ 
+componentsRouter.get("/mine/list", requireAuth, async (req, res) => {
+  const { data, error } = await supabase
+    .from("components")
+    .select("*, profiles(id, name)")
+    .eq("author_id", req.user.id)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to load your components" });
+  }
+
+  res.json({ components: data });
+});
+
+ 
 componentsRouter.post("/", requireAuth, async (req, res) => {
   const { name, description, category, code, install_command, dependencies, tags } = req.body;
 
@@ -55,7 +71,41 @@ componentsRouter.post("/", requireAuth, async (req, res) => {
       error: "name, description, category, code, and install_command are required",
     });
   }
-  // PUT /api/components/:id (auth required, owner only)
+
+  const slug = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+
+  const { data, error } = await supabase
+    .from("components")
+    .insert({
+      name,
+      slug,
+      description,
+      category,
+      code,
+      install_command,
+      dependencies: dependencies || [],
+      tags: tags || [],
+      author_id: req.user.id,  
+    })
+    .select("*, profiles(id, name)")
+    .single();
+
+  if (error) {
+    console.error(error);
+   
+    if (error.code === "23505") {
+      return res.status(409).json({ error: "A component with that name already exists" });
+    }
+    return res.status(500).json({ error: "Failed to create component" });
+  }
+
+  res.status(201).json({ component: data });
+});
+
 componentsRouter.put("/:id", requireAuth, async (req, res) => {
   const { id } = req.params;
 
@@ -97,8 +147,7 @@ componentsRouter.put("/:id", requireAuth, async (req, res) => {
 
   res.json({ component: data });
 });
-
-// DELETE /api/components/:id (auth required, owner only)
+ 
 componentsRouter.delete("/:id", requireAuth, async (req, res) => {
   const { id } = req.params;
 
@@ -123,38 +172,4 @@ componentsRouter.delete("/:id", requireAuth, async (req, res) => {
   }
 
   res.status(204).send();
-});
-
-  const slug = name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "");
-
-  const { data, error } = await supabase
-    .from("components")
-    .insert({
-      name,
-      slug,
-      description,
-      category,
-      code,
-      install_command,
-      dependencies: dependencies || [],
-      tags: tags || [],
-      author_id: req.user.id,  
-    })
-    .select("*, profiles(id, name)")
-    .single();
-
-  if (error) {
-    console.error(error);
-   
-    if (error.code === "23505") {
-      return res.status(409).json({ error: "A component with that name already exists" });
-    }
-    return res.status(500).json({ error: "Failed to create component" });
-  }
-
-  res.status(201).json({ component: data });
 });
